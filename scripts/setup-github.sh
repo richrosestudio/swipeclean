@@ -14,11 +14,14 @@ if ! gh auth status >/dev/null 2>&1; then
   gh auth login
 fi
 
+OWNER="$(gh api user -q .login)"
+REPO="swipeclean"
+
 if git remote get-url origin >/dev/null 2>&1; then
   echo "Remote origin already set:"
   git remote -v
 else
-  gh repo create richrose/swipeclean \
+  gh repo create "${OWNER}/${REPO}" \
     --public \
     --description "Swipe through files one at a time and trash only what you do not need." \
     --source=. \
@@ -27,7 +30,7 @@ else
 fi
 
 echo
-echo "Repo: https://github.com/richrose/swipeclean"
+echo "Repo: https://github.com/${OWNER}/${REPO}"
 echo
 echo "Next steps:"
 echo "  1. In GitHub repo Settings -> Pages, confirm Source is 'GitHub Actions'."
@@ -37,4 +40,4 @@ echo "       git tag v0.1.0"
 echo "       git push origin v0.1.0"
 echo
 echo "Download button target:"
-echo "  https://github.com/richrose/swipeclean/releases/latest"
+echo "  https://github.com/${OWNER}/${REPO}/releases/latest"
