@@ -60,7 +60,7 @@
 
       .actions {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 10px;
       }
 
@@ -75,6 +75,7 @@
         display: grid;
         place-items: center;
         cursor: pointer;
+        flex-shrink: 0;
         opacity: 0;
         animation: fade-in 700ms var(--ease) 80ms forwards;
       }
@@ -91,6 +92,16 @@
         outline: none;
       }
 
+      .download-block {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+        max-width: 280px;
+        opacity: 0;
+        animation: fade-in 700ms var(--ease) 80ms forwards;
+      }
+
       .download {
         border: 0;
         border-radius: 999px;
@@ -101,12 +112,80 @@
         font-weight: 600;
         text-decoration: none;
         white-space: nowrap;
-        opacity: 0;
-        animation: fade-in 700ms var(--ease) 80ms forwards;
+        text-align: center;
       }
 
       .download:hover {
         transform: translateY(-1px);
+      }
+
+      .download.is-loading {
+        pointer-events: none;
+        opacity: 0.7;
+      }
+
+      .install-hint {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+        text-align: right;
+        max-width: 260px;
+      }
+
+      .other-platforms {
+        width: 100%;
+        text-align: right;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .other-platforms summary {
+        cursor: pointer;
+        list-style: none;
+        user-select: none;
+      }
+
+      .other-platforms summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .other-platforms summary:hover,
+      .other-platforms summary:focus-visible {
+        color: var(--ink);
+        outline: none;
+      }
+
+      .other-platforms ul {
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+      }
+
+      .other-platforms a {
+        color: var(--muted);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      .other-platforms a:hover {
+        color: var(--ink);
+      }
+
+      .source-link {
+        color: #9a9a9a;
+        font-size: 12px;
+        text-decoration: none;
+      }
+
+      .source-link:hover {
+        color: var(--muted);
+        text-decoration: underline;
+        text-underline-offset: 2px;
       }
 
       main {
@@ -435,6 +514,14 @@
           padding-left: 24px;
           padding-right: 24px;
         }
+
+        .download-block {
+          max-width: 220px;
+        }
+
+        .install-hint {
+          max-width: 200px;
+        }
       }
 
       @media (max-width: 520px) {
@@ -449,7 +536,7 @@
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .download,
+        .download-block,
         .info,
         .logo,
         h1,
@@ -458,6 +545,10 @@
         .stats {
           animation: none;
           opacity: 1;
+          transform: none;
+        }
+
+        .download:hover {
           transform: none;
         }
 
@@ -507,12 +598,28 @@
             />
           </svg>
         </button>
-        <a
-          class="download"
-          href="https://github.com/richrosestudio/swipeclean/releases/latest"
-        >
-          Download
-        </a>
+        <div class="download-block">
+          <a
+            class="download is-loading"
+            id="download-primary"
+            href="https://github.com/richrosestudio/swipeclean/releases/latest"
+          >
+            Download the app
+          </a>
+          <p class="install-hint" id="install-hint"></p>
+          <details class="other-platforms" id="other-platforms">
+            <summary>Other platforms</summary>
+            <ul id="other-platforms-list"></ul>
+          </details>
+          <a
+            class="source-link"
+            href="https://github.com/richrosestudio/swipeclean"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View source on GitHub
+          </a>
+        </div>
       </div>
     </header>
     <main>
@@ -673,6 +780,208 @@
         <img src="bin.png" alt="" width="88" height="86" />
       </div>
     </div>
+
+    <script>
+      (function () {
+        const REPO = "richrosestudio/swipeclean";
+        const API = "https://api.github.com/repos/" + REPO + "/releases/latest";
+        const FALLBACK_TAG = "v0.1.0";
+        const FALLBACK_BASE =
+          "https://github.com/" + REPO + "/releases/download/" + FALLBACK_TAG + "/";
+
+        const HINTS = {
+          mac: "Open the .dmg, drag to Applications. If macOS blocks it, right-click the app and choose Open.",
+          windows: "Run the setup .exe and follow the prompts.",
+          linux:
+            "Make the .AppImage executable in your file manager, then open it. .deb and .rpm are under Other platforms.",
+          unknown: "Pick your platform below to download the installer.",
+        };
+
+        const LABELS = {
+          mac: "Download for Mac",
+          windows: "Download for Windows",
+          linux: "Download for Linux",
+          unknown: "Download the app",
+        };
+
+        const primary = document.getElementById("download-primary");
+        const hint = document.getElementById("install-hint");
+        const otherList = document.getElementById("other-platforms-list");
+        if (!primary || !hint || !otherList) return;
+
+        function detectPlatform() {
+          const ua = navigator.userAgent || "";
+          const platform = navigator.platform || "";
+          const data =
+            navigator.userAgentData && navigator.userAgentData.platform
+              ? navigator.userAgentData.platform
+              : "";
+          const hay = (data + " " + platform + " " + ua).toLowerCase();
+          if (/mac|iphone|ipad|ipod/.test(hay)) return "mac";
+          if (/win/.test(hay)) return "windows";
+          if (/linux|android|cros|x11/.test(hay)) return "linux";
+          return "unknown";
+        }
+
+        function pickAsset(assets, platform) {
+          const names = assets.map(function (a) {
+            return { name: a.name, url: a.browser_download_url };
+          });
+          function find(test) {
+            for (let i = 0; i < names.length; i++) {
+              if (test(names[i].name.toLowerCase())) return names[i];
+            }
+            return null;
+          }
+          if (platform === "mac") {
+            return (
+              find(function (n) {
+                return n.endsWith(".dmg") && n.indexOf("universal") !== -1;
+              }) ||
+              find(function (n) {
+                return n.endsWith(".dmg");
+              })
+            );
+          }
+          if (platform === "windows") {
+            return (
+              find(function (n) {
+                return n.endsWith("-setup.exe") || n.endsWith("setup.exe");
+              }) ||
+              find(function (n) {
+                return n.endsWith(".msi");
+              })
+            );
+          }
+          if (platform === "linux") {
+            return (
+              find(function (n) {
+                return n.endsWith(".appimage");
+              }) ||
+              find(function (n) {
+                return n.endsWith(".deb");
+              }) ||
+              find(function (n) {
+                return n.endsWith(".rpm");
+              })
+            );
+          }
+          return null;
+        }
+
+        function platformOfAsset(name) {
+          const n = name.toLowerCase();
+          if (n.endsWith(".dmg") || n.endsWith(".app")) return "mac";
+          if (n.endsWith(".msi") || n.endsWith(".exe")) return "windows";
+          if (n.endsWith(".appimage") || n.endsWith(".deb") || n.endsWith(".rpm"))
+            return "linux";
+          return "other";
+        }
+
+        function labelForAsset(name) {
+          const n = name.toLowerCase();
+          if (n.endsWith(".dmg")) return "Mac (.dmg)";
+          if (n.endsWith("-setup.exe") || n.endsWith("setup.exe"))
+            return "Windows (setup .exe)";
+          if (n.endsWith(".msi")) return "Windows (.msi)";
+          if (n.endsWith(".appimage")) return "Linux (.AppImage)";
+          if (n.endsWith(".deb")) return "Linux (.deb)";
+          if (n.endsWith(".rpm")) return "Linux (.rpm)";
+          return name;
+        }
+
+        function fallbackAssets() {
+          return [
+            {
+              name: "TakeOutTheTrash_0.1.0_universal.dmg",
+              browser_download_url: FALLBACK_BASE + "TakeOutTheTrash_0.1.0_universal.dmg",
+            },
+            {
+              name: "TakeOutTheTrash_0.1.0_x64-setup.exe",
+              browser_download_url:
+                FALLBACK_BASE + "TakeOutTheTrash_0.1.0_x64-setup.exe",
+            },
+            {
+              name: "TakeOutTheTrash_0.1.0_x64_en-US.msi",
+              browser_download_url:
+                FALLBACK_BASE + "TakeOutTheTrash_0.1.0_x64_en-US.msi",
+            },
+            {
+              name: "TakeOutTheTrash_0.1.0_amd64.AppImage",
+              browser_download_url:
+                FALLBACK_BASE + "TakeOutTheTrash_0.1.0_amd64.AppImage",
+            },
+            {
+              name: "TakeOutTheTrash_0.1.0_amd64.deb",
+              browser_download_url: FALLBACK_BASE + "TakeOutTheTrash_0.1.0_amd64.deb",
+            },
+            {
+              name: "TakeOutTheTrash-0.1.0-1.x86_64.rpm",
+              browser_download_url:
+                FALLBACK_BASE + "TakeOutTheTrash-0.1.0-1.x86_64.rpm",
+            },
+          ];
+        }
+
+        function applyRelease(assets) {
+          const platform = detectPlatform();
+          const primaryAsset = pickAsset(assets, platform);
+          primary.classList.remove("is-loading");
+
+          if (primaryAsset) {
+            primary.href = primaryAsset.url;
+            primary.setAttribute("download", primaryAsset.name);
+            primary.textContent = LABELS[platform] || LABELS.unknown;
+          } else {
+            primary.href = "https://github.com/" + REPO + "/releases/latest";
+            primary.removeAttribute("download");
+            primary.textContent = LABELS.unknown;
+          }
+
+          hint.textContent = HINTS[platform] || HINTS.unknown;
+
+          const primaryUrl = primaryAsset ? primaryAsset.url : "";
+          otherList.innerHTML = "";
+          const seen = {};
+          assets.forEach(function (asset) {
+            if (!asset.browser_download_url || seen[asset.browser_download_url])
+              return;
+            if (asset.browser_download_url === primaryUrl) return;
+            const kind = platformOfAsset(asset.name);
+            if (kind === "other") return;
+            seen[asset.browser_download_url] = true;
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = asset.browser_download_url;
+            a.setAttribute("download", asset.name);
+            a.textContent = labelForAsset(asset.name);
+            li.appendChild(a);
+            otherList.appendChild(li);
+          });
+
+          if (!otherList.children.length) {
+            const details = document.getElementById("other-platforms");
+            if (details) details.hidden = true;
+          }
+        }
+
+        fetch(API, {
+          headers: { Accept: "application/vnd.github+json" },
+        })
+          .then(function (res) {
+            if (!res.ok) throw new Error("release fetch failed");
+            return res.json();
+          })
+          .then(function (data) {
+            const assets = Array.isArray(data.assets) ? data.assets : [];
+            if (!assets.length) throw new Error("no assets");
+            applyRelease(assets);
+          })
+          .catch(function () {
+            applyRelease(fallbackAssets());
+          });
+      })();
+    </script>
 
     <script>
       (function () {
