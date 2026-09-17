@@ -176,18 +176,6 @@
         color: var(--ink);
       }
 
-      .source-link {
-        color: #9a9a9a;
-        font-size: 12px;
-        text-decoration: none;
-      }
-
-      .source-link:hover {
-        color: var(--muted);
-        text-decoration: underline;
-        text-underline-offset: 2px;
-      }
-
       main {
         min-height: calc(100vh - 88px);
         display: flex;
@@ -273,7 +261,7 @@
         width: 260px;
         height: 240px;
         z-index: 2;
-        cursor: grab;
+        cursor: url("cursor-pointer.png") 10 2, pointer;
         touch-action: none;
         pointer-events: auto;
         -webkit-tap-highlight-color: transparent;
@@ -288,7 +276,7 @@
         padding: 0;
         border: 0;
         background: none;
-        cursor: grab;
+        cursor: url("cursor-pointer.png") 10 2, pointer;
         touch-action: none;
         appearance: none;
         z-index: 5;
@@ -298,8 +286,10 @@
       }
 
       .paper:active,
-      .grab:active {
-        cursor: grabbing;
+      .grab:active,
+      body.is-aiming,
+      body.is-aiming * {
+        cursor: url("cursor-pointer.png") 10 2, pointer !important;
       }
 
       .paper img {
@@ -460,6 +450,15 @@
         text-align: left;
       }
 
+      .about-kicker {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
       .about h2 {
         margin: 0 0 14px;
         font-size: 32px;
@@ -500,6 +499,52 @@
 
       .about li + li {
         margin-top: 8px;
+      }
+
+      .about-divider {
+        margin: 40px 0 0;
+        border: 0;
+        border-top: 1px solid #e6e6e6;
+      }
+
+      .about-source {
+        margin-top: 32px;
+      }
+
+      .about-source-link {
+        margin-top: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px;
+        border: 1.5px solid #d8d8d8;
+        border-radius: 999px;
+        color: var(--ink);
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: border-color 160ms ease, transform 160ms ease,
+          background 160ms ease;
+      }
+
+      .about-source-link svg {
+        width: 18px;
+        height: 18px;
+        flex: none;
+      }
+
+      .about-source-link:hover,
+      .about-source-link:focus-visible {
+        border-color: var(--ink);
+        background: #f7f7f7;
+        transform: translateY(-1px);
+        outline: none;
+      }
+
+      .about-license {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 13px;
       }
 
       body.about-open {
@@ -611,14 +656,6 @@
             <summary>Other platforms</summary>
             <ul id="other-platforms-list"></ul>
           </details>
-          <a
-            class="source-link"
-            href="https://github.com/richrosestudio/swipeclean"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View source on GitHub
-          </a>
         </div>
       </div>
     </header>
@@ -658,6 +695,7 @@
         </button>
       </div>
       <article class="about-inner">
+        <p class="about-kicker">About Take out the Trash</p>
         <h2 id="about-title">How your files are handled</h2>
         <p class="about-lead">
           Take out the Trash runs on your computer. It does not upload your files, and
@@ -755,6 +793,37 @@
           folder if you are unsure. The app shows you each file so you can look
           before you queue.
         </p>
+
+        <hr class="about-divider" />
+
+        <div class="about-source">
+          <h3>Open source</h3>
+          <p>
+            Take out the Trash is open source under the MIT license. Anyone
+            can read the code, check how it works, or send improvements.
+          </p>
+          <a
+            class="about-source-link"
+            href="https://github.com/richrosestudio/swipeclean"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+                -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+                .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+                -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+                .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+                .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+                0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+              />
+            </svg>
+            View source on GitHub
+          </a>
+          <p class="about-license">Licensed under MIT.</p>
+        </div>
       </article>
     </div>
 
@@ -1138,7 +1207,7 @@
         const GRAVITY = reduced ? 0.26 : 0.148;
         const restDelay = reduced ? 90 : 160;
 
-        let rest = { x: 88, y: 132 };
+        let rest = { x: 24, y: 132 };
         let pos = { x: rest.x, y: rest.y };
         let vel = { x: 0, y: 0 };
         let angle = 0;
@@ -1181,7 +1250,7 @@
           courtScale = w < 560 ? 0.84 : 1;
           courtBw = BIN_W * courtScale;
           courtBh = BIN_H * courtScale;
-          const paperX = w < 560 ? 72 : 88;
+          const paperX = w < 560 ? 20 : 24;
           const mouthX = paperX + SIZE_W / 2;
           const rightLimit = w - 36 - courtBw * (1 - BIN_MOUTH_CX);
           const level = levelFromStreak();
@@ -1260,7 +1329,7 @@
           courtBh = BIN_H * courtScale;
           bin.style.width = courtBw + "px";
           bin.style.height = courtBh + "px";
-          const paperX = w < 560 ? 72 : 88;
+          const paperX = w < 560 ? 20 : 24;
           rest = { x: paperX, y: stage.clientHeight - SIZE_H - BIN_FLOOR - 38 };
           grab.style.width = Math.max(220, paperX + SIZE_W + 110) + "px";
           binBaseX = computeBinBaseX();
@@ -1767,6 +1836,7 @@
           stopFlight();
           sinking = false;
           mode = "idle";
+          document.body.classList.remove("is-aiming");
           bounced = false;
           stillMs = 0;
           missWait = 0;
@@ -2004,6 +2074,7 @@
           event.preventDefault();
           pointerId = event.pointerId;
           mode = "aim";
+          document.body.classList.add("is-aiming");
           hideHint();
           applyAim(readPull(event.clientX, event.clientY));
         }
@@ -2026,6 +2097,7 @@
           const pull = readPull(event.clientX, event.clientY);
           pointerId = null;
           mode = "fly";
+          document.body.classList.remove("is-aiming");
           clearAim();
           launch(pull);
         }
