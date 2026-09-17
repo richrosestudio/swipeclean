@@ -1,0 +1,1612 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Swipe Clean</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --ink: #111111;
+        --muted: #6b6b6b;
+        --paper: #6f6f6f;
+        --line: #5c5c5c;
+        --font: "Montserrat", "Avenir Next", "Segoe UI", sans-serif;
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font);
+      }
+
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 22px 48px;
+        position: relative;
+        z-index: 6;
+      }
+
+      .logo {
+        display: block;
+        line-height: 0;
+        opacity: 0;
+        animation: fade-in 700ms var(--ease) 80ms forwards;
+      }
+
+      .logo img {
+        display: block;
+        height: 44px;
+        width: auto;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .info {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 1.5px solid #c8c8c8;
+        border-radius: 50%;
+        background: #fff;
+        color: var(--ink);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        opacity: 0;
+        animation: fade-in 700ms var(--ease) 80ms forwards;
+      }
+
+      .info svg {
+        display: block;
+        width: 18px;
+        height: 18px;
+      }
+
+      .info:hover,
+      .info:focus-visible {
+        border-color: var(--ink);
+        outline: none;
+      }
+
+      .download {
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 20px;
+        background: var(--ink);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+        opacity: 0;
+        animation: fade-in 700ms var(--ease) 80ms forwards;
+      }
+
+      .download:hover {
+        transform: translateY(-1px);
+      }
+
+      main {
+        min-height: calc(100vh - 88px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 24px 72px 240px 72px;
+        text-align: left;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 52px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        opacity: 0;
+        transform: translateX(-20px);
+        animation: rise-in 700ms var(--ease) 80ms forwards;
+      }
+
+      .lede {
+        margin: 16px 0 0;
+        max-width: 38em;
+        color: #3a3a3a;
+        font-size: 18px;
+        font-weight: 400;
+        line-height: 1.45;
+        letter-spacing: -0.015em;
+        opacity: 0;
+        transform: translateX(-20px);
+        animation: rise-in 700ms var(--ease) 180ms forwards;
+      }
+
+      .free {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+        opacity: 0;
+        transform: translateX(-20px);
+        animation: rise-in 700ms var(--ease) 300ms forwards;
+      }
+
+      .stats {
+        margin: 10px 0 0;
+        max-width: 28em;
+        color: #9a9a9a;
+        font-size: 15px;
+        font-weight: 400;
+        letter-spacing: 0.01em;
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+
+      .stats.is-in {
+        animation: rise-in 700ms var(--ease) 420ms forwards;
+      }
+
+      .stats[hidden] {
+        display: none;
+      }
+
+      .game {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        user-select: none;
+        touch-action: none;
+        pointer-events: none;
+      }
+
+      .game canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 4;
+      }
+
+      .grab {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 260px;
+        height: 240px;
+        z-index: 2;
+        cursor: grab;
+        touch-action: none;
+        pointer-events: auto;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .paper {
+        position: absolute;
+        width: 42px;
+        height: 35px;
+        left: 0;
+        top: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        cursor: grab;
+        touch-action: none;
+        appearance: none;
+        z-index: 5;
+        pointer-events: auto;
+        transform-origin: center center;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .paper:active,
+      .grab:active {
+        cursor: grabbing;
+      }
+
+      .paper img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      .hint {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 22px;
+        height: 32px;
+        color: #b0b0b0;
+        pointer-events: none;
+        z-index: 3;
+      }
+
+      .hint.gone {
+        display: none;
+      }
+
+      .hint svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        animation: hint-pulse 1.8s var(--ease) infinite;
+      }
+
+      .bin {
+        position: absolute;
+        left: 0;
+        bottom: 16px;
+        width: 110px;
+        height: 108px;
+        overflow: visible;
+        pointer-events: none;
+        z-index: 1;
+        transition: transform 160ms var(--ease);
+      }
+
+      .bin.sink {
+        transform: translateY(3px);
+      }
+
+      .bin img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: bottom center;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      .streak {
+        position: absolute;
+        left: 0;
+        bottom: 48px;
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: #111111;
+        min-width: 28px;
+        text-align: center;
+        pointer-events: none;
+        z-index: 1;
+        transition: transform 180ms var(--ease), color 180ms var(--ease);
+      }
+
+      .streak.pop {
+        transform: scale(1.28);
+      }
+
+      @keyframes rise-in {
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes fade-in {
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes hint-pulse {
+        0%,
+        100% {
+          opacity: 0.4;
+          transform: translateY(0);
+        }
+        50% {
+          opacity: 1;
+          transform: translateY(4px);
+        }
+      }
+
+      .about {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        background: var(--bg);
+        overflow: auto;
+        color: var(--ink);
+      }
+
+      .about[hidden] {
+        display: none !important;
+      }
+
+      .about-bar {
+        display: flex;
+        justify-content: flex-end;
+        position: sticky;
+        top: 0;
+        padding: 22px 48px;
+        background: var(--bg);
+        z-index: 1;
+      }
+
+      .about-close {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 1.5px solid #c8c8c8;
+        border-radius: 50%;
+        background: #fff;
+        color: var(--ink);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+      }
+
+      .about-close svg {
+        display: block;
+        width: 14px;
+        height: 14px;
+      }
+
+      .about-close:hover,
+      .about-close:focus-visible {
+        border-color: var(--ink);
+        outline: none;
+      }
+
+      .about-inner {
+        max-width: 40em;
+        padding: 8px 72px 96px;
+        text-align: left;
+      }
+
+      .about h2 {
+        margin: 0 0 14px;
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+
+      .about .about-lead {
+        margin: 0 0 8px;
+        color: #3a3a3a;
+        font-size: 18px;
+        line-height: 1.5;
+      }
+
+      .about h3 {
+        margin: 32px 0 10px;
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .about p,
+      .about li {
+        margin: 0;
+        color: #3a3a3a;
+        font-size: 16px;
+        line-height: 1.55;
+      }
+
+      .about p + p {
+        margin-top: 10px;
+      }
+
+      .about ul {
+        margin: 8px 0 0;
+        padding-left: 1.15em;
+      }
+
+      .about li + li {
+        margin-top: 8px;
+      }
+
+      body.about-open {
+        overflow: hidden;
+      }
+
+      @media (max-width: 720px) {
+        .top,
+        main,
+        .about-bar,
+        .about-inner {
+          padding-left: 24px;
+          padding-right: 24px;
+        }
+      }
+
+      @media (max-width: 520px) {
+        h1 {
+          font-size: 40px;
+        }
+
+        .lede {
+          font-size: 16px;
+          max-width: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .download,
+        .info,
+        .logo,
+        h1,
+        .lede,
+        .free,
+        .stats {
+          animation: none;
+          opacity: 1;
+          transform: none;
+        }
+
+        .hint svg {
+          animation: none;
+          opacity: 0.7;
+        }
+
+        .bin,
+        .streak {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <a class="logo" href="./" aria-label="Swipe Clean">
+        <img src="logo.png" alt="" width="35" height="44" />
+      </a>
+      <div class="actions">
+        <button
+          class="info"
+          id="about-open"
+          type="button"
+          aria-haspopup="dialog"
+          aria-controls="about"
+          aria-expanded="false"
+          aria-label="How Swipe Clean handles your files"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle
+              cx="12"
+              cy="12"
+              r="9"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+            />
+            <circle cx="12" cy="7.7" r="1.05" fill="currentColor" />
+            <path
+              d="M12 10.8v6"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+        <a
+          class="download"
+          href="https://github.com/richrose/swipeclean/releases/latest"
+        >
+          Download
+        </a>
+      </div>
+    </header>
+    <main>
+      <h1>Swipe Clean</h1>
+      <p class="lede">
+        Swipe through files one at a time and trash only what you do not need.
+      </p>
+      <p class="free">Free to use</p>
+      <p class="stats" id="usage" hidden></p>
+    </main>
+
+    <div
+      class="about"
+      id="about"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="about-title"
+      hidden
+    >
+      <div class="about-bar">
+        <button
+          class="about-close"
+          id="about-close"
+          type="button"
+          aria-label="Close"
+        >
+          <svg viewBox="0 0 14 14" aria-hidden="true">
+            <path
+              d="M2 2l10 10M12 2L2 12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <article class="about-inner">
+        <h2 id="about-title">How your files are handled</h2>
+        <p class="about-lead">
+          Swipe Clean runs on your computer. It does not upload your files, and
+          it does not delete anything until you say so. Even then, files go to
+          Trash, not into the void.
+        </p>
+
+        <h3>You choose the folder</h3>
+        <p>
+          A scan starts only after you pick a folder. It will not wander the
+          rest of your disk on its own. System locations cannot be chosen as the
+          starting folder. If you pick Applications, you will get a warning, and
+          files that belong to the OS or are in use are skipped.
+        </p>
+
+        <h3>Nothing moves while you review</h3>
+        <ul>
+          <li>
+            You see one file at a time. Swipe right to keep it, left to queue
+            it. Keyboard arrows do the same.
+          </li>
+          <li>
+            Queueing is not deleting. Unreviewed files are left alone. You can
+            undo a swipe and take files out of the queue.
+          </li>
+          <li>
+            When you are ready, you confirm. A second prompt asks you to move
+            the queue to Trash, and you can cancel.
+          </li>
+        </ul>
+
+        <h3>Trash, not permanent delete</h3>
+        <p>
+          Confirmed files go to Trash. On a Mac that is done through Finder, so
+          Put Back is available, including from Swipe Clean, back to the
+          original folder.
+        </p>
+        <p>
+          Emptying Trash in Finder permanently deletes those files. Swipe Clean
+          never empties Trash for you.
+        </p>
+
+        <h3>Always skipped, and you cannot turn this off</h3>
+        <ul>
+          <li>
+            macOS system locations, including System and Library, and core
+            system folders.
+          </li>
+          <li>
+            Important data in your home Library: Keychains, Mail, Preferences,
+            Safari, Application Support, Accounts, and app containers.
+          </li>
+          <li>Files that are open in another app.</li>
+          <li>Version control folders named .git, .svn, or .hg.</li>
+          <li>Trash itself.</li>
+        </ul>
+        <p>
+          Protected files are skipped at scan time, and they are checked again
+          if something tries to move them to Trash. You can see a list of why
+          files were skipped.
+        </p>
+
+        <h3>Also skipped unless you change it</h3>
+        <p>
+          Files modified in the last 24 hours are skipped by default, so recent
+          work is left alone. You can shorten that window or turn it off. You
+          can add your own protected folders, file types, and folder names.
+          Those files never enter swipe or duplicate review.
+        </p>
+
+        <h3>Duplicates</h3>
+        <p>
+          For identical files you keep one copy and may queue the extras. For
+          similar images, nothing is queued until you choose extras yourself.
+        </p>
+
+        <h3>If a file cannot be moved</h3>
+        <p>
+          Permission problems, missing files, in-use files, and protected files
+          stay where they are. Failed items are listed and remain queued so
+          nothing disappears quietly.
+        </p>
+
+        <h3>Privacy</h3>
+        <p>
+          There is no account. File names and contents are not sent anywhere.
+          Scanning, previewing, and trashing all happen on your machine. This
+          website cannot see the files on your computer.
+        </p>
+
+        <h3>What still depends on you</h3>
+        <p>
+          If you queue the wrong file and confirm, it goes to Trash. Put it back
+          from the app or from Finder before you empty Trash. Go folder by
+          folder if you are unsure. The app shows you each file so you can look
+          before you queue.
+        </p>
+      </article>
+    </div>
+
+    <div class="game" aria-label="Toss the folder into the bin">
+      <canvas id="aim" width="800" height="380"></canvas>
+      <div class="grab" id="grab"></div>
+      <div class="hint" id="hint" aria-hidden="true">
+        <svg viewBox="0 0 28 36" fill="none">
+          <path
+            d="M14 4v22M14 26l-6-6M14 26l6-6"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+      <button class="paper" id="paper" type="button" aria-label="Folder">
+        <img src="folder.png" alt="" width="42" height="35" />
+      </button>
+      <p class="streak" id="streak"></p>
+      <div class="bin" id="bin" aria-hidden="true">
+        <img src="bin.png" alt="" width="88" height="86" />
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const el = document.getElementById("usage");
+        if (!el) return;
+
+        function formatBytes(bytes) {
+          if (!Number.isFinite(bytes) || bytes <= 0) return "";
+          if (bytes < 1024) return `${Math.round(bytes)} B`;
+          const units = ["KB", "MB", "GB", "TB"];
+          let value = bytes / 1024;
+          let unit = 0;
+          while (value >= 1024 && unit < units.length - 1) {
+            value /= 1024;
+            unit += 1;
+          }
+          const digits = value >= 10 || unit === 0 ? 0 : 1;
+          return `${value.toFixed(digits)} ${units[unit]}`;
+        }
+
+        function render(data) {
+          const fileCount = Math.max(0, Math.floor(Number(data.filesDeleted) || 0));
+          let space = String(data.spaceSaved || "").trim();
+          if (!space) space = formatBytes(Number(data.bytesSaved) || 0);
+          const parts = [];
+          if (fileCount > 0) {
+            parts.push(
+              fileCount.toLocaleString() +
+                (fileCount === 1 ? " file deleted" : " files deleted")
+            );
+          }
+          if (space) parts.push(space + " saved");
+          if (!parts.length) return;
+          el.textContent = parts.join(" · ");
+          el.hidden = false;
+          el.classList.add("is-in");
+        }
+
+        fetch("stats.json", { cache: "no-store" })
+          .then(function (res) {
+            if (!res.ok) throw new Error("missing stats");
+            return res.json();
+          })
+          .then(render)
+          .catch(function () {});
+      })();
+    </script>
+    <script>
+      (function () {
+        const openBtn = document.getElementById("about-open");
+        const closeBtn = document.getElementById("about-close");
+        const panel = document.getElementById("about");
+        const main = document.querySelector("main");
+        const game = document.querySelector(".game");
+        const top = document.querySelector(".top");
+        if (!openBtn || !closeBtn || !panel) return;
+
+        let lastFocus = null;
+
+        function focusables() {
+          return Array.prototype.slice.call(
+            panel.querySelectorAll(
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            )
+          ).filter(function (el) {
+            return !el.disabled && el.offsetParent !== null;
+          });
+        }
+
+        function setOpen(open) {
+          if (open) panel.removeAttribute("hidden");
+          else panel.setAttribute("hidden", "");
+          panel.setAttribute("aria-hidden", open ? "false" : "true");
+          document.body.classList.toggle("about-open", open);
+          openBtn.setAttribute("aria-expanded", open ? "true" : "false");
+          if (main) main.setAttribute("aria-hidden", open ? "true" : "false");
+          if (game) game.setAttribute("aria-hidden", open ? "true" : "false");
+          if (top) top.setAttribute("aria-hidden", open ? "true" : "false");
+          if (open) {
+            lastFocus = document.activeElement;
+            window.setTimeout(function () {
+              closeBtn.focus();
+            }, 0);
+            if (location.hash !== "#safety") {
+              history.replaceState(null, "", "#safety");
+            }
+          } else {
+            if (location.hash === "#safety") {
+              history.replaceState(null, "", location.pathname + location.search);
+            }
+            if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
+            else openBtn.focus();
+          }
+        }
+
+        openBtn.addEventListener("click", function () {
+          setOpen(true);
+        });
+        closeBtn.addEventListener("click", function () {
+          setOpen(false);
+        });
+
+        document.addEventListener("keydown", function (event) {
+          if (panel.hasAttribute("hidden")) return;
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setOpen(false);
+            return;
+          }
+          if (event.key !== "Tab") return;
+          const items = focusables();
+          if (!items.length) return;
+          const first = items[0];
+          const last = items[items.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        });
+
+        if (location.hash === "#safety") setOpen(true);
+      })();
+    </script>
+    <script>
+      (function () {
+        const stage = document.querySelector(".game");
+        const paper = document.getElementById("paper");
+        const grab = document.getElementById("grab");
+        const hint = document.getElementById("hint");
+        const streakEl = document.getElementById("streak");
+        const bin = document.getElementById("bin");
+        const canvas = document.getElementById("aim");
+        const ctx = canvas.getContext("2d");
+        const SIZE_W = 42;
+        const SIZE_H = 35;
+        const BALL_R = 13;
+        const TILT_MIN = -0.36;
+        const TILT_MAX = 1.12;
+        const BIN_W = 110;
+        const BIN_H = 108;
+        const BIN_FLOOR = 16;
+        const BIN_MOUTH_CX = 0.647;
+        const BIN_MOUTH_CY = 0.175;
+        const BIN_MOUTH_RX = 0.27;
+        const BIN_MOUTH_RY = 0.13;
+        const WALL_BOUNCE = 0.42;
+        const SCREEN_WALL_BOUNCE = 0.52;
+        const MAX_PULL = 130;
+        const FOLLOW = 0.3;
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const GRAVITY = reduced ? 0.26 : 0.148;
+        const restDelay = reduced ? 90 : 160;
+
+        let rest = { x: 88, y: 132 };
+        let pos = { x: rest.x, y: rest.y };
+        let vel = { x: 0, y: 0 };
+        let angle = 0;
+        let spin = 0;
+        let scale = 1;
+        let mode = "idle";
+        let bounced = false;
+        let stillMs = 0;
+        let streak = 0;
+        let tried = false;
+        let flying = false;
+        let sinking = false;
+        let missWait = 0;
+        let flyMs = 0;
+        let raf = 0;
+        let lastTime = 0;
+        let pointerId = null;
+
+        function layoutCourt() {
+          const w = stage.clientWidth;
+          const scale = w < 560 ? 0.84 : 1;
+          const bw = BIN_W * scale;
+          const bh = BIN_H * scale;
+          bin.style.width = bw + "px";
+          bin.style.height = bh + "px";
+          const paperX = w < 560 ? 72 : 88;
+          const rightLimit = w - 36 - bw * (1 - BIN_MOUTH_CX);
+          const mouthTarget = Math.min(
+            rightLimit,
+            paperX + (w < 560 ? 280 : Math.max(640, (rightLimit - paperX) * 0.62))
+          );
+          let binX = mouthTarget - bw * BIN_MOUTH_CX;
+          if (binX + bw > w - 12) binX = w - 12 - bw;
+          if (binX < 8) binX = 8;
+          rest = { x: paperX, y: stage.clientHeight - SIZE_H - BIN_FLOOR - 38 };
+          bin.style.left = binX + "px";
+          bin.style.bottom = BIN_FLOOR + "px";
+          streakEl.style.left = binX + bw * BIN_MOUTH_CX - 14 + "px";
+          streakEl.style.bottom = bh + BIN_FLOOR + 8 + "px";
+          grab.style.width = Math.max(220, paperX + SIZE_W + 110) + "px";
+        }
+
+        function placePaper() {
+          paper.style.transform =
+            "translate(" +
+            pos.x +
+            "px," +
+            pos.y +
+            "px) rotate(" +
+            angle +
+            "rad) scale(" +
+            scale +
+            ")";
+          hint.style.left = pos.x + (SIZE_W - 22) / 2 + "px";
+          hint.style.top = Math.max(6, pos.y - 40) + "px";
+        }
+
+        function sizeCanvas() {
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = Math.floor(stage.clientWidth * dpr);
+          canvas.height = Math.floor(stage.clientHeight * dpr);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function clearAim() {
+          ctx.clearRect(0, 0, stage.clientWidth, stage.clientHeight);
+        }
+
+        function ballCenter() {
+          return { x: pos.x + SIZE_W / 2, y: pos.y + SIZE_H / 2 };
+        }
+
+        function readPull(clientX, clientY) {
+          const box = stage.getBoundingClientRect();
+          const px = clientX - box.left;
+          const py = clientY - box.top;
+          const cx = rest.x + SIZE_W / 2;
+          const cy = rest.y + SIZE_H / 2;
+          let dx = cx - px;
+          let dy = cy - py;
+          const raw = Math.hypot(dx, dy);
+          const power = Math.min(1, raw / MAX_PULL);
+          if (raw > MAX_PULL && raw > 0) {
+            dx = (dx / raw) * MAX_PULL;
+            dy = (dy / raw) * MAX_PULL;
+          }
+          return { dx: dx, dy: dy, power: power };
+        }
+
+        function titleClearY() {
+          const heading = document.querySelector("h1");
+          const s = stage.getBoundingClientRect();
+          if (!heading) return 20;
+          const t = heading.getBoundingClientRect();
+          return Math.max(10, t.top - s.top - 24);
+        }
+
+        function sweetShot() {
+          const g = binShape();
+          const x0 = rest.x + SIZE_W / 2;
+          const y0 = rest.y + SIZE_H / 2;
+          const dx = Math.max(90, g.mouthCx - x0);
+          const dy = g.mouthCy - 8 - y0;
+          const t = Math.max(70, Math.min(108, 48 + dx / 11));
+          const vx = dx / t;
+          const vy = (dy - 0.5 * GRAVITY * t * t) / t;
+          return {
+            vx: vx,
+            vy: vy,
+            ang: Math.atan2(vy, vx),
+            spd: Math.hypot(vx, vy),
+          };
+        }
+
+        function launchVel(pull) {
+          const sweet = sweetShot();
+          const mag = Math.max(1, Math.hypot(pull.dx, pull.dy));
+          let ang = Math.atan2(pull.dy, pull.dx);
+          let diff = sweet.ang - ang;
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          const assist = Math.max(0, 1 - Math.abs(diff) / 0.38);
+          const assistK = assist * assist * 0.28;
+          ang += diff * assistK;
+          const speedK = (sweet.spd * 1.16) / MAX_PULL;
+          const spd = mag * speedK;
+          let vx = Math.cos(ang) * spd;
+          let vy = Math.sin(ang) * spd;
+          const down = Math.max(0, -pull.dy) / MAX_PULL;
+          const loftT = Math.max(
+            0,
+            Math.min(1, (pull.power - 0.78) / 0.18)
+          ) * Math.max(0, Math.min(1, (down - 0.45) / 0.25));
+          if (loftT > 0) {
+            const y0 = rest.y + SIZE_H / 2;
+            const rise = Math.max(80, y0 - titleClearY());
+            const titleVy = -Math.sqrt(2 * GRAVITY * rise);
+            if (vy > titleVy) vy = vy + (titleVy - vy) * loftT;
+          }
+          return { vx: vx, vy: vy };
+        }
+
+        function powerColor(power) {
+          const t = Math.max(0, Math.min(1, power));
+          const e = t * t * (3 - 2 * t);
+          const r = Math.round(46 + 196 * e);
+          const g = Math.round(196 - 148 * e);
+          const b = Math.round(72 - 40 * e);
+          return "rgb(" + r + "," + g + "," + b + ")";
+        }
+
+        function predictPath(flight, start) {
+          const pts = [];
+          let x = start.x;
+          let y = start.y;
+          let vx = flight.vx;
+          let vy = flight.vy;
+          const floor = stage.clientHeight - 10;
+          const steps = 28;
+          for (let i = 0; i < steps; i++) {
+            pts.push({ x: x, y: y });
+            vy += GRAVITY;
+            x += vx;
+            y += vy;
+            if (y > floor) break;
+          }
+          return pts;
+        }
+
+        function drawAim(pull) {
+          clearAim();
+          if (pull.power < 0.04) return;
+          const origin = {
+            x: rest.x + SIZE_W / 2,
+            y: rest.y + SIZE_H / 2,
+          };
+          const pts = predictPath(launchVel(pull), origin);
+          if (pts.length < 2) return;
+          const color = powerColor(pull.power);
+          const a = pts[pts.length - 2];
+          const b = pts[pts.length - 1];
+          const ang = Math.atan2(b.y - a.y, b.x - a.x);
+          const head = 10 + pull.power * 5;
+          const shaftEnd = {
+            x: b.x - Math.cos(ang) * head * 0.72,
+            y: b.y - Math.sin(ang) * head * 0.72,
+          };
+          const fade = Math.max(0, Math.min(1, (pull.power - 0.04) / 0.1));
+          ctx.save();
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = color;
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.55 + 0.4 * fade;
+          ctx.lineWidth = 2.4 + pull.power * 2.2;
+          ctx.beginPath();
+          ctx.moveTo(pts[1].x, pts[1].y);
+          for (let i = 2; i < pts.length - 1; i++) {
+            ctx.lineTo(pts[i].x, pts[i].y);
+          }
+          ctx.lineTo(shaftEnd.x, shaftEnd.y);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(b.x, b.y);
+          ctx.lineTo(
+            b.x - Math.cos(ang - 0.46) * head,
+            b.y - Math.sin(ang - 0.46) * head
+          );
+          ctx.lineTo(
+            b.x - Math.cos(ang + 0.46) * head,
+            b.y - Math.sin(ang + 0.46) * head
+          );
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        function binShape() {
+          const s = stage.getBoundingClientRect();
+          const b = bin.getBoundingClientRect();
+          const x = b.left - s.left;
+          const y = b.top - s.top;
+          const w = b.width;
+          const h = b.height;
+          const mouthCx = x + w * BIN_MOUTH_CX;
+          const mouthCy = y + h * BIN_MOUTH_CY;
+          const mouthRx = w * BIN_MOUTH_RX;
+          const mouthRy = h * BIN_MOUTH_RY;
+          return {
+            leftTop: { x: x + w * 0.42, y: y + h * 0.26 },
+            rightTop: { x: x + w * 0.91, y: y + h * 0.26 },
+            leftBot: { x: x + w * 0.43, y: y + h * 0.8 },
+            rightBot: { x: x + w * 0.91, y: y + h * 0.81 },
+            mouthCx: mouthCx,
+            mouthCy: mouthCy,
+            mouthRx: mouthRx,
+            mouthRy: mouthRy,
+            mouthL: mouthCx - mouthRx,
+            mouthR: mouthCx + mouthRx,
+            mouthY: mouthCy - mouthRy,
+            nearRimY: mouthCy + mouthRy,
+            lidCx: x + w * 0.255,
+            lidCy: y + h * 0.8,
+            lidRx: w * 0.22,
+            lidRy: h * 0.125,
+          };
+        }
+
+        function canXAt(g, py) {
+          const span = g.leftBot.y - g.leftTop.y;
+          const t = span === 0 ? 0 : (py - g.leftTop.y) / span;
+          const u = Math.max(0, Math.min(1, t));
+          return {
+            left: g.leftTop.x + (g.leftBot.x - g.leftTop.x) * u,
+            right: g.rightTop.x + (g.rightBot.x - g.rightTop.x) * u,
+          };
+        }
+
+        function inCanBody(p, g) {
+          if (p.y < g.nearRimY - 2 || p.y > g.leftBot.y + 6) return false;
+          const xs = canXAt(g, p.y);
+          return p.x > xs.left && p.x < xs.right;
+        }
+
+        function inMouthEllipse(p, g) {
+          const dx = (p.x - g.mouthCx) / g.mouthRx;
+          const dy = (p.y - g.mouthCy) / g.mouthRy;
+          return dx * dx + dy * dy <= 1;
+        }
+
+        function inMouthOpening(p, g) {
+          return (
+            inMouthEllipse(p, g) ||
+            (p.x > g.mouthL &&
+              p.x < g.mouthR &&
+              p.y < g.mouthCy + g.mouthRy + BALL_R &&
+              p.y > g.mouthY - BALL_R)
+          );
+        }
+
+        function bounceSeg(prev, a, b) {
+          const c = ballCenter();
+          const abx = b.x - a.x;
+          const aby = b.y - a.y;
+          const len = Math.hypot(abx, aby);
+          if (len < 0.001) return false;
+          const inv = 1 / (len * len);
+          const nx0 = -aby / len;
+          const ny0 = abx / len;
+          const tNowRaw = ((c.x - a.x) * abx + (c.y - a.y) * aby) * inv;
+          const tPrevRaw = ((prev.x - a.x) * abx + (prev.y - a.y) * aby) * inv;
+          const tNow = Math.max(0, Math.min(1, tNowRaw));
+          const qx = a.x + abx * tNow;
+          const qy = a.y + aby * tNow;
+          let dx = c.x - qx;
+          let dy = c.y - qy;
+          let dist = Math.hypot(dx, dy);
+          const sdPrev = (prev.x - a.x) * nx0 + (prev.y - a.y) * ny0;
+          const sdNow = (c.x - a.x) * nx0 + (c.y - a.y) * ny0;
+          const sdSpan = sdNow - sdPrev;
+          const tHit =
+            Math.abs(sdSpan) < 1e-8
+              ? tNowRaw
+              : tPrevRaw + (tNowRaw - tPrevRaw) * (-sdPrev / sdSpan);
+          const tunneled =
+            sdPrev * sdNow <= 0 &&
+            tHit >= -0.04 &&
+            tHit <= 1.04 &&
+            Math.abs(sdPrev) <= BALL_R + 24;
+          const hit = dist < BALL_R;
+          if (!hit && !tunneled) return false;
+
+          let nx;
+          let ny;
+          if (tunneled) {
+            nx = sdPrev >= 0 ? nx0 : -nx0;
+            ny = sdPrev >= 0 ? ny0 : -ny0;
+            const hx = a.x + abx * Math.max(0, Math.min(1, tHit));
+            const hy = a.y + aby * Math.max(0, Math.min(1, tHit));
+            pos.x = hx + nx * BALL_R - SIZE_W / 2;
+            pos.y = hy + ny * BALL_R - SIZE_H / 2;
+          } else {
+            if (dist < 0.0001) {
+              nx = sdPrev >= 0 ? nx0 : -nx0;
+              ny = sdPrev >= 0 ? ny0 : -ny0;
+              dist = 0;
+            } else {
+              nx = dx / dist;
+              ny = dy / dist;
+            }
+            const overlap = BALL_R - dist + 0.45;
+            pos.x += nx * overlap;
+            pos.y += ny * overlap;
+          }
+
+          const vn = vel.x * nx + vel.y * ny;
+          if (vn < 0) {
+            vel.x -= (1 + WALL_BOUNCE) * vn * nx;
+            vel.y -= (1 + WALL_BOUNCE) * vn * ny;
+          }
+          return true;
+        }
+
+        function inMouthPad(p, g, pad) {
+          const dx = (p.x - g.mouthCx) / (g.mouthRx * pad);
+          const dy = (p.y - g.mouthCy) / (g.mouthRy * pad);
+          return dx * dx + dy * dy <= 1;
+        }
+
+        function throughMouth(prev, next, g) {
+          if (vel.y <= 0.06) return false;
+          if (inMouthPad(next, g, 1.55) && prev.y <= g.mouthCy + 10) return true;
+          const yLine = g.mouthCy;
+          if (prev.y > yLine || next.y < yLine) return false;
+          const span = next.y - prev.y;
+          const u = span === 0 ? 1 : (yLine - prev.y) / span;
+          const xAt = prev.x + (next.x - prev.x) * u;
+          return inMouthPad({ x: xAt, y: yLine }, g, 1.45);
+        }
+
+        function attractMouth(g) {
+          if (vel.y < 0.12) return;
+          const c = ballCenter();
+          const dx = g.mouthCx - c.x;
+          const dy = g.mouthCy - c.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= 0 || dist > 48) return;
+          const k = (1 - dist / 48) * 0.22;
+          pos.x += dx * k;
+          pos.y += dy * k;
+          vel.x += dx * k * 0.05;
+        }
+
+        function bounceLid(g) {
+          const c = ballCenter();
+          const dx = (c.x - g.lidCx) / g.lidRx;
+          const nx2 = dx * dx;
+          if (nx2 > 1.15) return false;
+          const lidTop =
+            g.lidCy - g.lidRy * Math.sqrt(Math.max(0, 1 - Math.min(1, nx2)));
+          if (c.y + BALL_R < lidTop - 2) return false;
+          if (c.y > g.lidCy + g.lidRy + BALL_R) return false;
+          const dy = (c.y - g.lidCy) / g.lidRy;
+          if (nx2 + dy * dy > 1.28) return false;
+          if (vel.y > 0 && c.y < g.lidCy + 6) {
+            pos.y = lidTop - BALL_R - SIZE_H / 2;
+            vel.y *= -WALL_BOUNCE;
+            vel.x *= 0.7;
+            if (Math.abs(vel.y) < 0.8) vel.y = 0;
+            return true;
+          }
+          return bounceSeg(
+            { x: c.x - vel.x, y: c.y - vel.y },
+            { x: g.lidCx - g.lidRx, y: g.lidCy - 4 },
+            { x: g.lidCx + g.lidRx, y: g.lidCy - 10 }
+          );
+        }
+
+        function bounceNearRim(prev, g) {
+          const xs = canXAt(g, g.nearRimY);
+          return bounceSeg(
+            prev,
+            { x: xs.left, y: g.nearRimY },
+            { x: xs.right, y: g.nearRimY }
+          );
+        }
+
+        function ejectCanBody(prev, g) {
+          const c = ballCenter();
+          if (inMouthOpening(c, g) && vel.y > 0.12) return false;
+          if (!inCanBody(c, g) && !inCanBody(prev, g)) return false;
+          const xs = canXAt(g, c.y);
+          if (
+            prev.y + BALL_R <= g.nearRimY + 2 &&
+            c.y > g.nearRimY - 4 &&
+            c.x > xs.left &&
+            c.x < xs.right
+          ) {
+            pos.y = g.nearRimY - BALL_R - SIZE_H / 2;
+            if (vel.y > 0) {
+              vel.y *= -WALL_BOUNCE;
+              vel.x *= 0.7;
+            }
+            return true;
+          }
+          if (c.x - xs.left < xs.right - c.x) {
+            pos.x = xs.left - BALL_R - SIZE_W / 2;
+            if (vel.x > 0) {
+              vel.x *= -WALL_BOUNCE;
+              vel.y *= 0.85;
+            }
+          } else {
+            pos.x = xs.right + BALL_R - SIZE_W / 2;
+            if (vel.x < 0) {
+              vel.x *= -WALL_BOUNCE;
+              vel.y *= 0.85;
+            }
+          }
+          return true;
+        }
+
+        function collideBin(prev) {
+          const g = binShape();
+          attractMouth(g);
+          const next = ballCenter();
+          if (throughMouth(prev, next, g)) {
+            score();
+            return true;
+          }
+          if (
+            vel.y > 0.35 &&
+            next.x > g.mouthL - 8 &&
+            next.x < g.mouthR + 8 &&
+            next.y > g.mouthCy - 4 &&
+            next.y < g.nearRimY + 6 &&
+            prev.y <= g.mouthCy + 14
+          ) {
+            score();
+            return true;
+          }
+
+          const droppingIn =
+            vel.y > 0.08 &&
+            (inMouthPad(prev, g, 1.4) ||
+              inMouthPad(next, g, 1.4) ||
+              (next.y < g.nearRimY + 6 &&
+                next.x > g.mouthL - 18 &&
+                next.x < g.mouthR + 12));
+          const ox = pos.x;
+          const oy = pos.y;
+          const ovx = vel.x;
+          const ovy = vel.y;
+          bounceLid(g);
+          if (!droppingIn) {
+            bounceSeg(prev, g.leftTop, g.leftBot);
+            bounceSeg(prev, g.rightTop, g.rightBot);
+            bounceNearRim(prev, g);
+            bounceSeg(prev, g.leftBot, g.rightBot);
+            bounceSeg(prev, g.leftTop, g.leftBot);
+            bounceSeg(prev, g.rightTop, g.rightBot);
+            ejectCanBody(prev, g);
+          }
+          if (pos.x !== ox || pos.y !== oy || vel.x !== ovx || vel.y !== ovy) {
+            bounced = true;
+            spin *= -0.55;
+          }
+          return false;
+        }
+
+        function setStreak(value) {
+          streak = value;
+          streakEl.textContent = streak > 0 ? String(streak) : "";
+        }
+
+        function hideHint() {
+          if (tried) return;
+          tried = true;
+          hint.classList.add("gone");
+        }
+
+        function stopFlight() {
+          flying = false;
+          if (raf) {
+            window.cancelAnimationFrame(raf);
+            raf = 0;
+          }
+        }
+
+        function resetBall() {
+          stopFlight();
+          sinking = false;
+          mode = "idle";
+          bounced = false;
+          stillMs = 0;
+          missWait = 0;
+          flyMs = 0;
+          vel = { x: 0, y: 0 };
+          angle = 0;
+          spin = 0;
+          scale = 1;
+          paper.style.opacity = "1";
+          layoutCourt();
+          pos = { x: rest.x, y: rest.y };
+          paper.style.visibility = "visible";
+          placePaper();
+          clearAim();
+        }
+
+        function miss() {
+          setStreak(0);
+          resetBall();
+        }
+
+        function score() {
+          stopFlight();
+          flying = false;
+          mode = "idle";
+          clearAim();
+          setStreak(streak + 1);
+          if (!reduced) {
+            bin.classList.add("sink");
+            streakEl.classList.add("pop");
+            window.setTimeout(function () {
+              bin.classList.remove("sink");
+              streakEl.classList.remove("pop");
+            }, 220);
+          }
+          if (reduced) {
+            paper.style.visibility = "hidden";
+            window.setTimeout(resetBall, restDelay);
+            return;
+          }
+
+          sinking = true;
+          const g = binShape();
+          const from = { x: pos.x, y: pos.y, a: angle, s: 1 };
+          const to = {
+            x: g.mouthCx - SIZE_W / 2,
+            y: g.mouthCy - SIZE_H * 0.18,
+            a: Math.min(1.4, Math.max(angle + 0.35, 0.85)),
+            s: 0.22,
+          };
+          const t0 = performance.now();
+          const dur = 180;
+
+          function sinkTick(now) {
+            if (!sinking) return;
+            const u = Math.min(1, (now - t0) / dur);
+            const e = 1 - Math.pow(1 - u, 3);
+            pos.x = from.x + (to.x - from.x) * e;
+            pos.y = from.y + (to.y - from.y) * e;
+            angle = from.a + (to.a - from.a) * e;
+            scale = from.s + (to.s - from.s) * e;
+            paper.style.opacity = String(1 - u * 0.9);
+            placePaper();
+            if (u < 1) {
+              raf = window.requestAnimationFrame(sinkTick);
+            } else {
+              paper.style.visibility = "hidden";
+              sinking = false;
+              window.setTimeout(resetBall, restDelay);
+            }
+          }
+
+          raf = window.requestAnimationFrame(sinkTick);
+        }
+
+        function updateTilt(dt) {
+          if (reduced) {
+            angle = 0;
+            spin = 0;
+            return;
+          }
+          if (vel.y > 0.8 && vel.x > 0.6) {
+            spin = Math.max(spin, 0.022);
+          }
+          angle += spin * dt;
+          spin *= Math.pow(0.99, dt);
+          if (angle > TILT_MAX) {
+            angle = TILT_MAX;
+            if (spin > 0) spin *= 0.12;
+          } else if (angle < TILT_MIN) {
+            angle = TILT_MIN;
+            if (spin < 0) spin *= 0.12;
+          }
+        }
+
+        function clearlyMissed(floor) {
+          const c = ballCenter();
+          if (c.x > stage.clientWidth + 200 || c.x < -200) return true;
+          if (c.y > stage.clientHeight + 24) return true;
+          if (bounced && pos.y >= floor - 1 && Math.abs(vel.y) < 1.4) return true;
+          if (flyMs > 6000) return true;
+          return false;
+        }
+
+        function step(dt) {
+          if (!flying) return;
+          const floor = stage.clientHeight - SIZE_H - 10;
+          flyMs += (dt || 1) * 16.67;
+
+          if (clearlyMissed(floor)) {
+            missWait += (dt || 1) * 16.67;
+            if (missWait >= (reduced ? 40 : 80)) {
+              miss();
+              return;
+            }
+          } else {
+            missWait = 0;
+          }
+
+          const still = Math.abs(vel.x) < 0.32 && Math.abs(vel.y) < 0.32;
+          const settled = still && (pos.y >= floor - 0.6 || bounced);
+
+          if (settled) {
+            vel.x = 0;
+            vel.y = 0;
+            spin = 0;
+            if (pos.y >= floor - 0.6) pos.y = floor;
+            placePaper();
+            miss();
+            return;
+          }
+
+          const subs = Math.max(1, Math.min(6, Math.ceil((Math.hypot(vel.x, vel.y) * dt) / 8)));
+          const sdt = dt / subs;
+          for (let i = 0; i < subs; i++) {
+            const prev = ballCenter();
+            vel.y += GRAVITY * sdt;
+            pos.x += vel.x * sdt;
+            pos.y += vel.y * sdt;
+            if (pos.y < floor - 2 && collideBin(prev)) return;
+
+            if (pos.x < 0) {
+              pos.x = 0;
+              vel.x *= -SCREEN_WALL_BOUNCE;
+              spin *= -0.6;
+              bounced = true;
+            } else {
+              const rightEdge = stage.clientWidth - SIZE_W;
+              if (pos.x > rightEdge) {
+                pos.x = rightEdge;
+                vel.x *= -SCREEN_WALL_BOUNCE;
+                spin *= -0.6;
+                bounced = true;
+              }
+            }
+
+            if (pos.y > floor && vel.y > 0) {
+              pos.y = floor;
+              vel.y *= -0.32;
+              vel.x *= 0.68;
+              spin *= -0.5;
+              bounced = true;
+              if (Math.abs(vel.y) < 1.1) vel.y = 0;
+            }
+
+            if (pos.y >= floor - 0.6) {
+              pos.y = Math.min(pos.y, floor);
+              vel.x *= Math.pow(0.84, sdt);
+              if (Math.abs(vel.x) < 0.32) vel.x = 0;
+              if (Math.abs(vel.y) < 0.4) vel.y = 0;
+            }
+          }
+
+          updateTilt(dt);
+          placePaper();
+        }
+
+        function tick(now) {
+          if (!flying) {
+            raf = 0;
+            return;
+          }
+          const dt = Math.min(2.2, (now - lastTime) / 16.67);
+          lastTime = now;
+          step(dt || 1);
+          if (flying) raf = window.requestAnimationFrame(tick);
+        }
+
+        function applyAim(pull) {
+          pos = {
+            x: rest.x - pull.dx * FOLLOW,
+            y: rest.y - pull.dy * FOLLOW,
+          };
+          angle = reduced ? 0 : -0.34 * pull.power;
+          spin = 0;
+          scale = 1;
+          placePaper();
+          drawAim(pull);
+        }
+
+        function launch(pull) {
+          if (pull.power < 0.08) {
+            resetBall();
+            return;
+          }
+          const flight = launchVel(pull);
+          vel = { x: flight.vx, y: flight.vy };
+          angle = reduced ? 0 : -0.18 * pull.power;
+          spin = reduced ? 0 : 0.03 + pull.power * 0.05;
+          scale = 1;
+          stopFlight();
+          flying = true;
+          bounced = false;
+          stillMs = 0;
+          missWait = 0;
+          flyMs = 0;
+          placePaper();
+          lastTime = performance.now();
+          raf = window.requestAnimationFrame(tick);
+        }
+
+        function isAimPointer(event) {
+          return mode === "aim" && pointerId !== null && event.pointerId === pointerId;
+        }
+
+        function startAim(event) {
+          if (flying || sinking) return;
+          event.preventDefault();
+          pointerId = event.pointerId;
+          mode = "aim";
+          hideHint();
+          applyAim(readPull(event.clientX, event.clientY));
+        }
+
+        grab.addEventListener("pointerdown", startAim, { passive: false });
+        paper.addEventListener("pointerdown", startAim, { passive: false });
+
+        window.addEventListener(
+          "pointermove",
+          function (event) {
+            if (!isAimPointer(event)) return;
+            event.preventDefault();
+            applyAim(readPull(event.clientX, event.clientY));
+          },
+          { passive: false }
+        );
+
+        function endAim(event) {
+          if (!isAimPointer(event)) return;
+          const pull = readPull(event.clientX, event.clientY);
+          pointerId = null;
+          mode = "fly";
+          clearAim();
+          launch(pull);
+        }
+
+        window.addEventListener("pointerup", endAim);
+        window.addEventListener("pointercancel", endAim);
+
+        window.addEventListener("resize", function () {
+          sizeCanvas();
+          if (!flying && mode !== "aim") resetBall();
+        });
+
+        sizeCanvas();
+        resetBall();
+        setStreak(0);
+      })();
+    </script>
+  </body>
+</html>

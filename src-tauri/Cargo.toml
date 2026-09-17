@@ -1,0 +1,38 @@
+[package]
+name = "swipeclean"
+version = "0.1.0"
+description = "Tinder-style desktop app for reviewing files and moving them to the OS trash"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "swipeclean_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+walkdir = "2"
+trash = "5"
+sha2 = "0.10"
+rayon = "1.10"
+dirs = "5"
+fs2 = "0.4"
+image = { version = "0.23.14", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
+img_hash = "3.2"
+
+[target.'cfg(windows)'.dependencies]
+known-folders = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
