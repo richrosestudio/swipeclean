@@ -6,13 +6,22 @@ on:
       - "v*"
 
 jobs:
-  publish:
+  build:
     permissions:
-      contents: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-22.04, windows-latest]
+        include:
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+            artifact: macos
+          - platform: ubuntu-22.04
+            args: ""
+            artifact: linux
+          - platform: windows-latest
+            args: ""
+            artifact: windows
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -38,24 +47,70 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build and upload release
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional macOS signing (add these as GitHub repo secrets):
-          # APPLE_CERTIFICATE
-          # APPLE_CERTIFICATE_PASSWORD
-          # APPLE_SIGNING_IDENTITY
-          # APPLE_ID
-          # APPLE_PASSWORD
-          # APPLE_TEAM_ID
+      - name: Build the app
+        run: npm run tauri build -- ${{ matrix.args }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Take out the Trash ${{ github.ref_name }}
-          releaseBody: |
+          name: ${{ matrix.artifact }}
+          path: |
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.app
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app
+          if-no-files-found: warn
+          compression-level: 0
+
+  publish:
+    needs: build
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect installers
+        run: |
+          mkdir -p upload
+          find artifacts -type f \( \
+            -name "*.dmg" -o \
+            -name "*.AppImage" -o \
+            -name "*.deb" -o \
+            -name "*.rpm" -o \
+            -name "*.msi" -o \
+            -name "*-setup.exe" \
+          \) -print0 | while IFS= read -r -d '' file; do
+            base="$(basename "$file")"
+            cp "$file" "upload/$base"
+            echo "Collected $base"
+          done
+          ls -la upload
+          test "$(find upload -type f | wc -l)" -gt 0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Take out the Trash ${{ github.ref_name }}
+          body: |
             Download the installer for your platform below.
 
             **macOS:** open the `.dmg`, drag TakeOutTheTrash to Applications. If macOS blocks the app because it is unsigned, right-click the app and choose Open once.
-          releaseDraft: false
-          prerelease: false
-          args: ${{ matrix.platform == 'macos-latest' && '--target universal-apple-darwin' || '' }}
+
+            **Windows:** run the `.msi` or setup `.exe` installer.
+
+            **Linux:** use the `.AppImage`, `.deb`, or `.rpm`.
+          files: upload/*
+          fail_on_unmatched_files: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
