@@ -51,11 +51,11 @@ jobs:
           # APPLE_TEAM_ID
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: Swipe Clean ${{ github.ref_name }}
+          releaseName: Take out the Trash ${{ github.ref_name }}
           releaseBody: |
             Download the installer for your platform below.
 
-            **macOS:** open the `.dmg`, drag Swipe Clean to Applications. If macOS blocks the app because it is unsigned, right-click the app and choose Open once.
+            **macOS:** open the `.dmg`, drag TakeOutTheTrash to Applications. If macOS blocks the app because it is unsigned, right-click the app and choose Open once.
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.platform == 'macos-latest' && '--target universal-apple-darwin' || '' }}

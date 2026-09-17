@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Swipe Clean</title>
+    <title>Take out the Trash</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -263,11 +263,12 @@
         overflow: visible;
         pointer-events: none;
         z-index: 1;
-        transition: transform 160ms var(--ease);
+        will-change: transform;
+        transform: translate3d(0, 0, 0);
       }
 
       .bin.sink {
-        transform: translateY(3px);
+        /* sink offset is applied in JS so it can combine with slide */
       }
 
       .bin img {
@@ -293,11 +294,12 @@
         text-align: center;
         pointer-events: none;
         z-index: 1;
-        transition: transform 180ms var(--ease), color 180ms var(--ease);
+        will-change: transform;
+        transition: color 180ms var(--ease);
       }
 
       .streak.pop {
-        transform: scale(1.28);
+        /* scale is applied in JS with the slide transform */
       }
 
       @keyframes rise-in {
@@ -473,7 +475,7 @@
   </head>
   <body>
     <header class="top">
-      <a class="logo" href="./" aria-label="Swipe Clean">
+      <a class="logo" href="./" aria-label="Take out the Trash">
         <img src="logo.png" alt="" width="35" height="44" />
       </a>
       <div class="actions">
@@ -484,7 +486,7 @@
           aria-haspopup="dialog"
           aria-controls="about"
           aria-expanded="false"
-          aria-label="How Swipe Clean handles your files"
+          aria-label="How Take out the Trash handles your files"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle
@@ -514,7 +516,7 @@
       </div>
     </header>
     <main>
-      <h1>Swipe Clean</h1>
+      <h1>Take out the Trash</h1>
       <p class="lede">
         Swipe through files one at a time and trash only what you do not need.
       </p>
@@ -551,7 +553,7 @@
       <article class="about-inner">
         <h2 id="about-title">How your files are handled</h2>
         <p class="about-lead">
-          Swipe Clean runs on your computer. It does not upload your files, and
+          Take out the Trash runs on your computer. It does not upload your files, and
           it does not delete anything until you say so. Even then, files go to
           Trash, not into the void.
         </p>
@@ -583,11 +585,11 @@
         <h3>Trash, not permanent delete</h3>
         <p>
           Confirmed files go to Trash. On a Mac that is done through Finder, so
-          Put Back is available, including from Swipe Clean, back to the
+          Put Back is available, including from Take out the Trash, back to the
           original folder.
         </p>
         <p>
-          Emptying Trash in Finder permanently deletes those files. Swipe Clean
+          Emptying Trash in Finder permanently deletes those files. Take out the Trash
           never empties Trash for you.
         </p>
 
@@ -845,29 +847,129 @@
         let raf = 0;
         let lastTime = 0;
         let pointerId = null;
+        let binBaseX = 0;
+        let binDriftX = 0;
+        let binDriftSmooth = 0;
+        let binMoveRaf = 0;
+        let binMoveStart = 0;
+        let binSinkY = 0;
+        let streakPop = false;
+        let courtScale = 1;
+        let courtBw = BIN_W;
+        let courtBh = BIN_H;
+        const MOVE_MIN_LEVEL = 5;
 
-        function layoutCourt() {
+        function levelFromStreak() {
+          return streak + 1;
+        }
+
+        function shouldBinSlide() {
+          return levelFromStreak() >= MOVE_MIN_LEVEL;
+        }
+
+        function computeBinBaseX() {
           const w = stage.clientWidth;
-          const scale = w < 560 ? 0.84 : 1;
-          const bw = BIN_W * scale;
-          const bh = BIN_H * scale;
-          bin.style.width = bw + "px";
-          bin.style.height = bh + "px";
+          courtScale = w < 560 ? 0.84 : 1;
+          courtBw = BIN_W * courtScale;
+          courtBh = BIN_H * courtScale;
           const paperX = w < 560 ? 72 : 88;
-          const rightLimit = w - 36 - bw * (1 - BIN_MOUTH_CX);
-          const mouthTarget = Math.min(
-            rightLimit,
-            paperX + (w < 560 ? 280 : Math.max(640, (rightLimit - paperX) * 0.62))
+          const mouthX = paperX + SIZE_W / 2;
+          const rightLimit = w - 36 - courtBw * (1 - BIN_MOUTH_CX);
+          const level = levelFromStreak();
+          const minGap = w < 560 ? 58 : 72;
+          const step = w < 560 ? 40 : 62;
+          const maxGap = Math.max(minGap, rightLimit - mouthX);
+          const gap = Math.min(maxGap, minGap + (level - 1) * step);
+          let binX = mouthX + gap - courtBw * BIN_MOUTH_CX;
+          if (binX + courtBw > w - 12) binX = w - 12 - courtBw;
+          if (binX < paperX + SIZE_W + 8) binX = paperX + SIZE_W + 8;
+          return binX;
+        }
+
+        function applyBinPosition(moveBase) {
+          if (moveBase) {
+            bin.style.left = binBaseX + "px";
+            streakEl.style.left = binBaseX + courtBw * BIN_MOUTH_CX - 14 + "px";
+            streakEl.style.bottom = courtBh + BIN_FLOOR + 8 + "px";
+          }
+          const x = binDriftSmooth;
+          bin.style.transform =
+            "translate3d(" + x + "px," + binSinkY + "px,0)";
+          streakEl.style.transform =
+            "translate3d(" +
+            x +
+            "px,0,0) scale(" +
+            (streakPop ? 1.28 : 1) +
+            ")";
+        }
+
+        function stopBinMotion(freeze) {
+          if (binMoveRaf) {
+            window.cancelAnimationFrame(binMoveRaf);
+            binMoveRaf = 0;
+          }
+          if (!freeze) {
+            binMoveStart = 0;
+            binDriftX = 0;
+            binDriftSmooth = 0;
+          }
+        }
+
+        function tickBinMotion(now) {
+          if (!shouldBinSlide() || flying || sinking || mode === "fly") {
+            stopBinMotion(true);
+            applyBinPosition(false);
+            return;
+          }
+          if (!binMoveStart) binMoveStart = now;
+          const level = levelFromStreak();
+          const amp = Math.min(
+            Math.max(28, stage.clientWidth * 0.06),
+            16 + (level - MOVE_MIN_LEVEL + 1) * 12
           );
-          let binX = mouthTarget - bw * BIN_MOUTH_CX;
-          if (binX + bw > w - 12) binX = w - 12 - bw;
-          if (binX < 8) binX = 8;
+          const speed = 0.55 + (level - MOVE_MIN_LEVEL) * 0.08;
+          const t = (now - binMoveStart) / 1000;
+          binDriftX = Math.sin(t * speed) * amp;
+          binDriftSmooth += (binDriftX - binDriftSmooth) * 0.18;
+          applyBinPosition(false);
+          binMoveRaf = window.requestAnimationFrame(tickBinMotion);
+        }
+
+        function updateBinMotion() {
+          stopBinMotion();
+          if (shouldBinSlide() && !reduced) {
+            binMoveRaf = window.requestAnimationFrame(tickBinMotion);
+          } else {
+            applyBinPosition(true);
+          }
+        }
+
+        function layoutCourt(animateBin) {
+          const w = stage.clientWidth;
+          courtScale = w < 560 ? 0.84 : 1;
+          courtBw = BIN_W * courtScale;
+          courtBh = BIN_H * courtScale;
+          bin.style.width = courtBw + "px";
+          bin.style.height = courtBh + "px";
+          const paperX = w < 560 ? 72 : 88;
           rest = { x: paperX, y: stage.clientHeight - SIZE_H - BIN_FLOOR - 38 };
-          bin.style.left = binX + "px";
-          bin.style.bottom = BIN_FLOOR + "px";
-          streakEl.style.left = binX + bw * BIN_MOUTH_CX - 14 + "px";
-          streakEl.style.bottom = bh + BIN_FLOOR + 8 + "px";
           grab.style.width = Math.max(220, paperX + SIZE_W + 110) + "px";
+          binBaseX = computeBinBaseX();
+          bin.style.bottom = BIN_FLOOR + "px";
+          if (animateBin && !reduced) {
+            bin.style.transition =
+              "left 420ms cubic-bezier(0.16, 1, 0.3, 1)";
+            streakEl.style.transition =
+              "left 420ms cubic-bezier(0.16, 1, 0.3, 1), color 180ms var(--ease)";
+            window.setTimeout(function () {
+              bin.style.transition = "";
+              streakEl.style.transition = "color 180ms var(--ease)";
+            }, 440);
+          } else {
+            bin.style.transition = "";
+          }
+          applyBinPosition(true);
+          updateBinMotion();
         }
 
         function placePaper() {
@@ -1003,44 +1105,61 @@
             x: rest.x + SIZE_W / 2,
             y: rest.y + SIZE_H / 2,
           };
-          const pts = predictPath(launchVel(pull), origin);
+          const flight = launchVel(pull);
+          const pts = predictPath(flight, origin);
           if (pts.length < 2) return;
+
+          let pathLen = 0;
+          for (let i = 1; i < pts.length; i++) {
+            pathLen += Math.hypot(
+              pts[i].x - pts[i - 1].x,
+              pts[i].y - pts[i - 1].y
+            );
+          }
+
           const color = powerColor(pull.power);
-          const a = pts[pts.length - 2];
-          const b = pts[pts.length - 1];
-          const ang = Math.atan2(b.y - a.y, b.x - a.x);
-          const head = 10 + pull.power * 5;
-          const shaftEnd = {
-            x: b.x - Math.cos(ang) * head * 0.72,
-            y: b.y - Math.sin(ang) * head * 0.72,
-          };
           const fade = Math.max(0, Math.min(1, (pull.power - 0.04) / 0.1));
+          const tip = pts[pts.length - 1];
+          const tail = pts[pts.length - 2];
+          const ang = Math.atan2(tip.y - tail.y, tip.x - tail.x);
+          const head = Math.min(pathLen * 0.38, 4 + pull.power * 9);
+          const showHead = pathLen > 24 && head >= 6;
+          const shaftEnd = showHead
+            ? {
+                x: tip.x - Math.cos(ang) * head * 0.78,
+                y: tip.y - Math.sin(ang) * head * 0.78,
+              }
+            : tip;
+
           ctx.save();
           ctx.lineCap = "round";
           ctx.lineJoin = "round";
           ctx.strokeStyle = color;
           ctx.fillStyle = color;
           ctx.globalAlpha = 0.55 + 0.4 * fade;
-          ctx.lineWidth = 2.4 + pull.power * 2.2;
+          ctx.lineWidth = 1.8 + pull.power * 2.4;
           ctx.beginPath();
-          ctx.moveTo(pts[1].x, pts[1].y);
-          for (let i = 2; i < pts.length - 1; i++) {
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length - 1; i++) {
             ctx.lineTo(pts[i].x, pts[i].y);
           }
           ctx.lineTo(shaftEnd.x, shaftEnd.y);
           ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(b.x, b.y);
-          ctx.lineTo(
-            b.x - Math.cos(ang - 0.46) * head,
-            b.y - Math.sin(ang - 0.46) * head
-          );
-          ctx.lineTo(
-            b.x - Math.cos(ang + 0.46) * head,
-            b.y - Math.sin(ang + 0.46) * head
-          );
-          ctx.closePath();
-          ctx.fill();
+
+          if (showHead) {
+            ctx.beginPath();
+            ctx.moveTo(tip.x, tip.y);
+            ctx.lineTo(
+              tip.x - Math.cos(ang - 0.48) * head,
+              tip.y - Math.sin(ang - 0.48) * head
+            );
+            ctx.lineTo(
+              tip.x - Math.cos(ang + 0.48) * head,
+              tip.y - Math.sin(ang + 0.48) * head
+            );
+            ctx.closePath();
+            ctx.fill();
+          }
           ctx.restore();
         }
 
@@ -1335,7 +1454,7 @@
           }
         }
 
-        function resetBall() {
+        function resetBall(animateBin) {
           stopFlight();
           sinking = false;
           mode = "idle";
@@ -1348,7 +1467,7 @@
           spin = 0;
           scale = 1;
           paper.style.opacity = "1";
-          layoutCourt();
+          layoutCourt(!!animateBin);
           pos = { x: rest.x, y: rest.y };
           paper.style.visibility = "visible";
           placePaper();
@@ -1357,7 +1476,7 @@
 
         function miss() {
           setStreak(0);
-          resetBall();
+          resetBall(true);
         }
 
         function score() {
@@ -1367,16 +1486,20 @@
           clearAim();
           setStreak(streak + 1);
           if (!reduced) {
-            bin.classList.add("sink");
-            streakEl.classList.add("pop");
+            binSinkY = 3;
+            streakPop = true;
+            applyBinPosition(false);
             window.setTimeout(function () {
-              bin.classList.remove("sink");
-              streakEl.classList.remove("pop");
+              binSinkY = 0;
+              streakPop = false;
+              applyBinPosition(false);
             }, 220);
           }
           if (reduced) {
             paper.style.visibility = "hidden";
-            window.setTimeout(resetBall, restDelay);
+            window.setTimeout(function () {
+              resetBall(true);
+            }, restDelay);
             return;
           }
 
@@ -1407,7 +1530,9 @@
             } else {
               paper.style.visibility = "hidden";
               sinking = false;
-              window.setTimeout(resetBall, restDelay);
+              window.setTimeout(function () {
+                resetBall(true);
+              }, restDelay);
             }
           }
 
@@ -1541,9 +1666,10 @@
 
         function launch(pull) {
           if (pull.power < 0.08) {
-            resetBall();
+            resetBall(false);
             return;
           }
+          stopBinMotion(true);
           const flight = launchVel(pull);
           vel = { x: flight.vx, y: flight.vy };
           angle = reduced ? 0 : -0.18 * pull.power;
@@ -1600,11 +1726,11 @@
 
         window.addEventListener("resize", function () {
           sizeCanvas();
-          if (!flying && mode !== "aim") resetBall();
+          if (!flying && mode !== "aim") resetBall(false);
         });
 
         sizeCanvas();
-        resetBall();
+        resetBall(false);
         setStreak(0);
       })();
     </script>

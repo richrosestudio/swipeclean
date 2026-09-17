@@ -149,12 +149,13 @@ fn restore_paths_os_limited(paths: Vec<String>) -> Vec<TrashItemResult> {
     let listed = match trash::os_limited::list() {
         Ok(items) => items,
         Err(error) => {
+            let message = humanize_error(error);
             return paths
                 .into_iter()
                 .map(|path| TrashItemResult {
                     path,
                     ok: false,
-                    error: Some(humanize_error(error)),
+                    error: Some(message.clone()),
                 })
                 .collect();
         }
